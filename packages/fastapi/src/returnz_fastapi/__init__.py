@@ -1,9 +1,14 @@
 """returnz-fastapi — FastAPI + Pydantic integration for returnz.
 
-Maps ``Err`` values onto HTTP responses (``Err -> HTTPException`` by error tag),
-lets ``Result`` / ``Maybe`` cross the wire as tagged JSON, and wires validated
-Pydantic settings as dependencies.
+Return a ``Result`` from your services, then ``unwrap_or_raise`` at the route
+boundary: ``Ok`` values flow through as the success type, ``Err`` values become
+HTTP responses by the error's own status and tag (``HttpError``).
 """
 
-__all__: list[str] = []
-__version__ = "0.0.0"
+from returnz_fastapi.boundary import unwrap_or_raise
+from returnz_fastapi.errors import HttpError
+
+__all__ = [
+    "HttpError",
+    "unwrap_or_raise",
+]

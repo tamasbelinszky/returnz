@@ -8,6 +8,7 @@ license = "MIT"
 authors = [{ name = "Tamás Belinszky", email = "tamasbelinszky@gmail.com" }]
 dependencies = [
     "returnz",
+    "returnz-pydantic",
     "fastapi>=0.115",
     "pydantic>=2.9",
 ]
@@ -21,3 +22,4 @@ packages = ["src/returnz_fastapi"]
 
 [tool.uv.sources]
 returnz = { workspace = true }
+returnz-pydantic = { workspace = true }
