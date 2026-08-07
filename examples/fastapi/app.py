@@ -78,13 +78,13 @@ async def delete_order(order_id: str) -> Result[str, NotFound]:
 orders = ResultRouter(prefix="/orders", tags=["orders"])
 
 
-@orders.get("/{order_id}")
+@orders.get("/{order_id}", summary="Get an order")
 async def get_order(order_id: str) -> Result[Order, BadId | NotFound]:
     return await find_order(order_id)
 
 
-@orders.post("/{order_id}/ship")
-async def post_ship(order_id: str) -> Result[Order, BadId | NotFound | AlreadyShipped]:
+@orders.post("/{order_id}/ship", summary="Ship an order")
+async def ship(order_id: str) -> Result[Order, BadId | NotFound | AlreadyShipped]:
     return await ship_order(order_id)
 
 
@@ -92,7 +92,7 @@ async def post_ship(order_id: str) -> Result[Order, BadId | NotFound | AlreadySh
 batch = BatchRouter(prefix="/orders", tags=["orders"])
 
 
-@batch.post("/delete")
+@batch.post("/delete", summary="Delete orders")
 async def delete_orders(ids: list[str]) -> BatchResult[str, str, NotFound]:
     return await map_batch(ids, delete_order)
 
