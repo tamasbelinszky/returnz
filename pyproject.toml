@@ -1,0 +1,34 @@
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[dependency-groups]
+dev = [
+    "ty>=0.0.1",
+    "pyright>=1.1.390",
+    "mypy>=1.13",
+    "ruff>=0.8",
+    "pytest>=8.3",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+src = ["packages/core/src", "packages/fastapi/src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pyright]
+pythonVersion = "3.14"
+typeCheckingMode = "strict"
+include = ["packages/core/src", "packages/fastapi/src", "packages/core/tests", "packages/fastapi/tests"]
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+# Deliberately NO plugins — returnz types are plain PEP 695 generics.
+
+[tool.pytest.ini_options]
+testpaths = ["packages/core/tests", "packages/fastapi/tests"]
+addopts = "--import-mode=importlib"
+consider_namespace_packages = true

@@ -1,0 +1,7 @@
+returnz
+Copyright 2026 Tamás Belinszky
+
+This project is a clean-room reimagining. Its API vocabulary and type names
+(Result/Ok/Err, Maybe/Some/Nothing, Reader, do-notation) are inspired by
+dry-python/returns (https://github.com/dry-python/returns), licensed BSD-2-Clause.
+No source code was copied from that project.
