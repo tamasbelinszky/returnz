@@ -1,15 +1,22 @@
-"""ResultRoute / ResultRouter — return a ``Result`` from a handler and get a
-correct, fully-documented HTTP endpoint for free.
+"""Routers that turn a returnz return type into a correct, documented endpoint.
 
-From a handler annotated ``-> Result[T, E]`` the route:
+Both work the same way — introspect the handler's return annotation, set the
+response schema, and transform the return value — differing only in the transform.
 
-1. **unwraps** ``Ok`` to its value (so the response body is ``T``) or raises the
-   ``Err``'s ``HTTPException`` (``Err -> HTTPException`` by the error's status);
+``ResultRouter`` — from ``-> Result[T, E]``:
+
+1. **unwraps** ``Ok`` to its value (response body is ``T``) or raises the ``Err``'s
+   ``HTTPException`` (``Err -> HTTPException`` by the error's status);
 2. sets ``response_model = T`` so the ``200`` schema is correct;
-3. **auto-derives the OpenAPI error responses** from ``E`` — each ``HttpError``
-   in the (possibly union) error type becomes a documented ``responses`` entry
-   with its status and schema. Plain FastAPI only documents ``200`` + ``422``;
-   here your typed errors show up in ``/docs`` out of the box.
+3. **auto-derives the OpenAPI error responses** from ``E`` — each ``HttpError`` in
+   the (possibly union) error type becomes a documented ``responses`` entry.
+   Plain FastAPI documents only ``200`` + ``422``; here your typed errors show up
+   in ``/docs`` out of the box.
+
+``BatchRouter`` — from ``-> BatchResult[K, T, E]``: responds **HTTP 207
+Multi-Status** with the ``{succeeded, failed}`` envelope (via ``RzBatchResult``),
+so a partial-success batch returns every outcome with typed per-item failures
+instead of a whole-batch 500.
 
 Usage::
 
@@ -18,29 +25,31 @@ Usage::
     @router.get("/users/{id}")
     async def get_user(id: str) -> Result[User, NotFound | RateLimited]:
         ...
-
-The introspection helpers (``_error_types`` / ``_responses_for``) are factored so
-the batch reporting layer (a ``BatchResult[K, T, E]`` handler -> HTTP 207) can
-reuse the same error-type derivation.
 """
 
 import functools
 import inspect
 import types
 from collections.abc import Callable
+from http import HTTPStatus
 from typing import Any, Union, get_args, get_origin, get_type_hints
 
 from fastapi import APIRouter
 from fastapi.datastructures import DefaultPlaceholder
 from fastapi.routing import APIRoute
 
-from returnz import Result
+from returnz import BatchResult, Result
 from returnz.result import Err, Ok
 from returnz_fastapi.errors import HttpError
+from returnz_pydantic import RzBatchResult
 
 
 def _is_result(annotation: object) -> bool:
     return get_origin(annotation) is Result
+
+
+def _is_batch_result(annotation: object) -> bool:
+    return get_origin(annotation) is BatchResult
 
 
 def _error_types(annotation: object) -> list[type[HttpError]]:
@@ -102,6 +111,38 @@ class ResultRoute(APIRoute):
 class ResultRouter(APIRouter):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         kwargs.setdefault("route_class", ResultRoute)
+        super().__init__(*args, **kwargs)
+
+
+class BatchRoute(APIRoute):
+    """From a handler ``-> BatchResult[K, T, E]``: respond **HTTP 207 Multi-Status**
+    with the ``{succeeded, failed}`` envelope (serialized via ``RzBatchResult``, so
+    each per-item failure keeps its typed schema), documented in OpenAPI.
+
+    The web analog of AWS ``batchItemFailures``: successes and typed failures in
+    one response, never a whole-batch 500. Reuses the same introspect-return-type
+    approach as ``ResultRoute``; here the transform is "serialize the envelope"
+    rather than "unwrap or raise".
+    """
+
+    def __init__(self, path: str, endpoint: Callable[..., Any], **kwargs: Any) -> None:
+        annotation = get_type_hints(endpoint).get("return")
+        if annotation is not None and _is_batch_result(annotation):
+            key_type, value_type, error_type = get_args(annotation)
+
+            if kwargs.get("status_code") is None:
+                kwargs["status_code"] = HTTPStatus.MULTI_STATUS
+
+            response_model = kwargs.get("response_model")
+            if response_model is None or isinstance(response_model, DefaultPlaceholder):
+                # types from get_args, built at runtime — mypy can't verify vars-as-types.
+                kwargs["response_model"] = RzBatchResult[key_type, value_type, error_type]  # type: ignore[valid-type]
+        super().__init__(path, endpoint, **kwargs)
+
+
+class BatchRouter(APIRouter):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        kwargs.setdefault("route_class", BatchRoute)
         super().__init__(*args, **kwargs)
 
 

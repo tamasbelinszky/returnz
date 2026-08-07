@@ -5,8 +5,8 @@ from typing import Literal
 import pytest
 from pydantic import BaseModel, TypeAdapter
 
-from returnz import Err, Maybe, Nothing, Ok, Result, Some
-from returnz_pydantic import RzMaybe, RzResult, TaggedError
+from returnz import BatchResult, Err, Maybe, Nothing, Ok, Result, Some
+from returnz_pydantic import RzBatchResult, RzMaybe, RzResult, TaggedError
 
 
 class User(BaseModel):
@@ -22,6 +22,7 @@ class Boom(TaggedError):
 _result: TypeAdapter[Result[User, str]] = TypeAdapter(RzResult[User, str])
 _maybe: TypeAdapter[Maybe[int | None]] = TypeAdapter(RzMaybe[int | None])
 _err_result: TypeAdapter[Result[int, Boom]] = TypeAdapter(RzResult[int, Boom])
+_batch: TypeAdapter[BatchResult[str, str, Boom]] = TypeAdapter(RzBatchResult[str, str, Boom])
 
 
 class Envelope(BaseModel):
@@ -72,3 +73,18 @@ class TestTaggedErrorAsError:
         dumped = _err_result.dump_python(Err(Boom(detail="kaboom")))
 
         assert dumped == {"err": {"tag": "boom", "detail": "kaboom"}}
+
+
+class TestBatchResultEnvelope:
+    def test_dumps_succeeded_and_failed(self) -> None:
+        outcome = BatchResult(succeeded={"a": "a"}, failed={"b": Boom(detail="x")})
+
+        assert _batch.dump_python(outcome) == {
+            "succeeded": {"a": "a"},
+            "failed": {"b": {"tag": "boom", "detail": "x"}},
+        }
+
+    def test_round_trips(self) -> None:
+        outcome = BatchResult(succeeded={"a": "a"}, failed={"b": Boom(detail="x")})
+
+        assert _batch.validate_python(_batch.dump_python(outcome)) == outcome
