@@ -25,14 +25,18 @@ jobs:
       - name: Ruff format
         run: uv run ruff format --check .
 
-      - name: ty (primary type checker)
-        run: uv run ty check
-
-      - name: pyright (consumer-conformance gate)
+      # pyright is the PRIMARY correctness gate: returnz is union-generics
+      # end-to-end (Result = Ok[T] | Err[E]), and ty 0.0.x cannot yet bind a
+      # generic typevar across a union-typed argument (it degrades to Unknown —
+      # gradual, never a false error). pyright + mypy verify those precisely.
+      - name: pyright (primary correctness gate)
         run: uv run pyright
 
-      - name: mypy (plugin-free conformance gate)
+      - name: mypy (second gate, plugin-free)
         run: uv run mypy packages/core/src packages/pydantic/src packages/fastapi/src
+
+      - name: ty (fast smoke-check + editor LSP; union-generic-blind for now)
+        run: uv run ty check
 
       - name: pytest
         run: uv run pytest
