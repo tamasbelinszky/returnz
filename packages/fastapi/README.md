@@ -28,7 +28,7 @@ async def fetch_user(user_id: str) -> Result[User, NotFound]:
 
 @do_async
 async def zip_of(user_id: str) -> Result[str, NotFound]:
-    user = require(await fetch_user(user_id))   # ? on the Result
+    user = require(await fetch_user(user_id))  # ? on the Result
     return Ok(user.zip)
 
 
