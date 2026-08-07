@@ -7,11 +7,20 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    environment: pypi
+    strategy:
+      matrix:
+        include:
+          - package: returnz
+            environment: pypi
+          - package: returnz-pydantic
+            environment: pypi-pydantic
+          - package: returnz-fastapi
+            environment: pypi-fastapi
+    environment: ${{ matrix.environment }}
     permissions:
-      # PyPI Trusted Publishing (OIDC) — no API token needed. Configure the
-      # trusted publisher for each of returnz / returnz-pydantic / returnz-fastapi
-      # at https://pypi.org/manage/account/publishing/ before the first release.
+      # PyPI Trusted Publishing (OIDC) — no API token stored. Each package gets its
+      # own environment because PyPI keys a *pending* publisher on
+      # (owner, repo, workflow, environment) and requires that tuple to be unique.
       id-token: write
     steps:
       - uses: actions/checkout@v4
@@ -21,8 +30,8 @@ jobs:
         with:
           python-version: "3.14"
 
-      - name: Build all packages
-        run: uv build --all-packages
+      - name: Build ${{ matrix.package }}
+        run: uv build --package ${{ matrix.package }}
 
-      - name: Publish to PyPI
+      - name: Publish ${{ matrix.package }} to PyPI
         run: uv publish

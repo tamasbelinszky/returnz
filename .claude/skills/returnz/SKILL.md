@@ -25,15 +25,20 @@ constructors. Each variant is a subtype of its union (like Rust's `Ok`/`Err`).
 ```python
 from returnz import Ok, Err, Result, Some, Nothing, Maybe
 
+
 def parse_int(s: str) -> Result[int, str]:
     return Ok(int(s)) if s.lstrip("-").isdigit() else Err(f"not an int: {s}")
 
-def first(xs: list[int]) -> Maybe[int]:      # Maybe = Some(value) | Nothing
+
+def first(xs: list[int]) -> Maybe[int]:  # Maybe = Some(value) | Nothing
     return Some(xs[0]) if xs else Nothing()
 
-match parse_int("42"):          # exhaustive — checkers flag a missing case
-    case Ok(value): ...
-    case Err(error): ...
+
+match parse_int("42"):  # exhaustive — checkers flag a missing case
+    case Ok(value):
+        ...
+    case Err(error):
+        ...
 ```
 
 Result ops are top-level free functions: `map_ok`, `map_err`, `and_then`,
@@ -50,13 +55,15 @@ Return a container explicitly — `@do` does not auto-wrap.
 ```python
 from returnz import Ok, Result, do, do_async, require
 
+
 @do
 def add(a: str, b: str) -> Result[int, str]:
-    x = require(parse_int(a))   # int, or short-circuit
+    x = require(parse_int(a))  # int, or short-circuit
     y = require(parse_int(b))
     return Ok(x + y)
 
-@do_async                       # for async def (FastAPI handlers, etc.)
+
+@do_async  # for async def (FastAPI handlers, etc.)
 async def fetch_and_add(a: str, b: str) -> Result[int, str]:
     x = require(await fetch(a))  # fetch -> Result[int, ...]; require unwraps
     y = require(await fetch(b))
@@ -76,13 +83,15 @@ async def fetch_and_add(a: str, b: str) -> Result[int, str]:
 ```python
 from returnz import BatchResult, map_batch
 
+
 async def delete_orders(ids: list[str]) -> BatchResult[str, str, DeleteError]:
-    return await map_batch(ids, delete_one, concurrency=8)   # delete_one -> Result
+    return await map_batch(ids, delete_one, concurrency=8)  # delete_one -> Result
+
 
 outcome = await delete_orders(["a", "bad", "c"])
-outcome.succeeded   # {"a": "a", "c": "c"}
-outcome.failed      # {"bad": DeleteError(...)}
-outcome.failed_keys # ["bad"] — the retry set
+outcome.succeeded  # {"a": "a", "c": "c"}
+outcome.failed  # {"bad": DeleteError(...)}
+outcome.failed_keys  # ["bad"] — the retry set
 ```
 
 `map_batch` never short-circuits and preserves ambient `ContextVar`s (e.g. a
@@ -107,17 +116,21 @@ from pydantic import BaseModel
 from returnz import Ok, Err, Result
 from returnz_fastapi import ResultRouter, HttpError
 
+
 class User(BaseModel):
     id: str
     name: str
 
-class NotFound(HttpError):          # an HttpError carries its status + tag
+
+class NotFound(HttpError):  # an HttpError carries its status + tag
     status_code = 404
     tag: Literal["not_found"] = "not_found"
     id: str
 
+
 router = ResultRouter()
 _users = {"42": User(id="42", name="Ann")}
+
 
 @router.get("/users/{id}")
 async def get_user(id: str) -> Result[User, NotFound]:

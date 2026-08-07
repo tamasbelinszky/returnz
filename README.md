@@ -128,9 +128,12 @@ uv run pytest
 Publishing is automated by [`.github/workflows/publish.yml`](.github/workflows/publish.yml)
 via PyPI Trusted Publishing (OIDC — no tokens stored). To cut a release:
 
-1. Create a trusted publisher for each of `returnz` / `returnz-pydantic` /
-   `returnz-fastapi` at <https://pypi.org/manage/account/publishing/> — repo
-   `tamasbelinszky/returnz`, workflow `publish.yml`, environment `pypi`.
+1. Create a trusted publisher for each package at
+   <https://pypi.org/manage/account/publishing/> — repo `tamasbelinszky/returnz`,
+   workflow `publish.yml`, with a **distinct environment per package** (PyPI
+   requires the publisher tuple to be unique):
+   `returnz` → `pypi`, `returnz-pydantic` → `pypi-pydantic`,
+   `returnz-fastapi` → `pypi-fastapi`.
 2. Bump the version in each `packages/*/pyproject.toml`; commit.
 3. Publish a GitHub release (tag `v0.1.0`) — the workflow builds and uploads all
    three packages.
