@@ -135,7 +135,7 @@ via PyPI Trusted Publishing (OIDC — no tokens stored). To cut a release:
    `returnz` → `pypi`, `returnz-pydantic` → `pypi-pydantic`,
    `returnz-fastapi` → `pypi-fastapi`.
 2. Bump the version in each `packages/*/pyproject.toml`; commit.
-3. Publish a GitHub release (tag `v0.1.0`) — the workflow builds and uploads all
-   three packages.
+3. Push a `v*` tag (e.g. `git tag v0.1.0 && git push origin v0.1.0`) — the
+   workflow builds and uploads all three packages, each in its own environment.
 
 See `NOTICE` for lineage. MIT licensed.
