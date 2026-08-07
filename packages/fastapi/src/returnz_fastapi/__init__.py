@@ -7,8 +7,11 @@ HTTP responses by the error's own status and tag (``HttpError``).
 
 from returnz_fastapi.boundary import unwrap_or_raise
 from returnz_fastapi.errors import HttpError
+from returnz_fastapi.routing import ResultRoute, ResultRouter
 
 __all__ = [
     "HttpError",
+    "ResultRoute",
+    "ResultRouter",
     "unwrap_or_raise",
 ]
