@@ -105,6 +105,9 @@ in `/docs` with no extra code. `BatchRouter` turns a `BatchResult` into HTTP
 **207 Multi-Status** (the web analog of AWS `batchItemFailures`): successes and
 typed per-item failures in one response, never a whole-batch 500.
 
+A complete, runnable version is in [`examples/fastapi/`](examples/fastapi/) —
+`uv run examples/fastapi/app.py`, then open `/docs`.
+
 ## Claude Code skill
 
 An agent skill ships at [`.claude/skills/returnz/`](.claude/skills/returnz/SKILL.md)
