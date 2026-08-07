@@ -68,6 +68,13 @@ type. `BatchRouter` turns a `BatchResult` into HTTP **207 Multi-Status** (the we
 analog of AWS `batchItemFailures`): successes and typed per-item failures in one
 response, never a whole-batch 500.
 
+## Claude Code skill
+
+An agent skill ships at [`.claude/skills/returnz/`](.claude/skills/returnz/SKILL.md)
+— it teaches Claude Code idiomatic returnz (the compose trio, the routers, and the
+anti-patterns to avoid). Copy that directory into your own project's
+`.claude/skills/` to use it.
+
 ## Develop
 
 ```sh
