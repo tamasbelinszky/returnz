@@ -9,6 +9,8 @@ it as ``case Nothing():``.
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from returnz.result import Err, Ok, Result
+
 
 @dataclass(frozen=True, slots=True)
 class Some[T]:
@@ -45,3 +47,12 @@ def unwrap_or[T, D](maybe: Maybe[T], default: D) -> T | D:
             return value
         case Nothing():
             return default
+
+
+def ok_or[T, E](maybe: Maybe[T], error: E) -> Result[T, E]:
+    """Convert a Maybe into a Result, using ``error`` for the Nothing case."""
+    match maybe:
+        case Some(value):
+            return Ok(value)
+        case Nothing():
+            return Err(error)

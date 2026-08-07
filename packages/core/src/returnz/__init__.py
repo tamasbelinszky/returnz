@@ -10,7 +10,8 @@ are exported here; Maybe operations live in ``returnz.maybe`` (their names would
 otherwise collide with the Result ones).
 """
 
-from returnz.maybe import Maybe, Nothing, Some
+from returnz.do import do, q
+from returnz.maybe import Maybe, Nothing, Some, ok_or
 from returnz.reader import Reader
 from returnz.result import (
     Err,
@@ -34,8 +35,11 @@ __all__ = [
     "Some",
     "UnwrapError",
     "and_then",
+    "do",
     "map_err",
     "map_ok",
+    "ok_or",
+    "q",
     "unwrap",
     "unwrap_or",
 ]
