@@ -28,6 +28,9 @@ from returnz import Ok, Err, Result, Some, Nothing, Maybe
 def parse_int(s: str) -> Result[int, str]:
     return Ok(int(s)) if s.lstrip("-").isdigit() else Err(f"not an int: {s}")
 
+def first(xs: list[int]) -> Maybe[int]:      # Maybe = Some(value) | Nothing
+    return Some(xs[0]) if xs else Nothing()
+
 match parse_int("42"):          # exhaustive — checkers flag a missing case
     case Ok(value): ...
     case Err(error): ...
@@ -55,8 +58,9 @@ def add(a: str, b: str) -> Result[int, str]:
 
 @do_async                       # for async def (FastAPI handlers, etc.)
 async def fetch_and_add(a: str, b: str) -> Result[int, str]:
-    x = require(await fetch(a))
-    return Ok(x)
+    x = require(await fetch(a))  # fetch -> Result[int, ...]; require unwraps
+    y = require(await fetch(b))
+    return Ok(x + y)
 ```
 
 ## Pick the right shape
@@ -70,10 +74,10 @@ async def fetch_and_add(a: str, b: str) -> Result[int, str]:
 ## Partial-success batches
 
 ```python
-from returnz import BatchResult, map_batch, partition
+from returnz import BatchResult, map_batch
 
 async def delete_orders(ids: list[str]) -> BatchResult[str, str, DeleteError]:
-    return await map_batch(ids, delete_one, concurrency=8)
+    return await map_batch(ids, delete_one, concurrency=8)   # delete_one -> Result
 
 outcome = await delete_orders(["a", "bad", "c"])
 outcome.succeeded   # {"a": "a", "c": "c"}
@@ -98,7 +102,8 @@ correlation id) into each concurrent op. `partition(results)` splits a list of
 ## FastAPI (returnz-fastapi)
 
 ```python
-from returnz_fastapi import ResultRouter, BatchRouter, HttpError
+from typing import Literal
+from returnz_fastapi import ResultRouter, HttpError
 
 class NotFound(HttpError):
     status_code = 404
