@@ -1,13 +1,28 @@
 [project]
 name = "returnz"
-version = "0.0.0"
+version = "0.1.0"
 description = "Result / Maybe / Reader for modern Python — concrete generics, no HKT, no type-checker plugin."
 readme = "README.md"
 requires-python = ">=3.14"
 license = "MIT"
-authors = [{ name = "Tamás Belinszky", email = "tamasbelinszky@gmail.com" }]
+license-files = ["LICENSE"]
+authors = [{ name = "Tamás Belinszky" }]
 keywords = ["result", "maybe", "option", "reader", "railway", "functional", "error-handling"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.14",
+    "Typing :: Typed",
+]
 dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/tamasbelinszky/returnz"
+Repository = "https://github.com/tamasbelinszky/returnz"
+Issues = "https://github.com/tamasbelinszky/returnz/issues"
 
 [build-system]
 requires = ["hatchling"]

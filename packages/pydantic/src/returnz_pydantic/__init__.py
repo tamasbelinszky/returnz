@@ -5,6 +5,8 @@ Tagged-envelope serialization (``RzResult`` / ``RzMaybe``), validation as a
 serializable errors (``TaggedError``).
 """
 
+from importlib.metadata import version
+
 from returnz_pydantic.errors import TaggedError
 from returnz_pydantic.parsing import parse, parse_json
 from returnz_pydantic.serialization import RzBatchResult, RzMaybe, RzResult
@@ -17,3 +19,4 @@ __all__ = [
     "parse",
     "parse_json",
 ]
+__version__ = version("returnz-pydantic")

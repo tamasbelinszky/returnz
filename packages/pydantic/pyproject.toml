@@ -1,15 +1,32 @@
 [project]
 name = "returnz-pydantic"
-version = "0.0.0"
+version = "0.1.0"
 description = "Pydantic v2 integration for returnz — tagged-envelope serialization, parse() boundary, tagged errors."
 readme = "README.md"
 requires-python = ">=3.14"
 license = "MIT"
-authors = [{ name = "Tamás Belinszky", email = "tamasbelinszky@gmail.com" }]
+license-files = ["LICENSE"]
+authors = [{ name = "Tamás Belinszky" }]
+keywords = ["returnz", "pydantic", "result", "serialization", "validation"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: Pydantic :: 2",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.14",
+    "Typing :: Typed",
+]
 dependencies = [
-    "returnz",
+    "returnz>=0.1.0",
     "pydantic>=2.9",
 ]
+
+[project.urls]
+Homepage = "https://github.com/tamasbelinszky/returnz"
+Repository = "https://github.com/tamasbelinszky/returnz"
+Issues = "https://github.com/tamasbelinszky/returnz/issues"
 
 [build-system]
 requires = ["hatchling"]

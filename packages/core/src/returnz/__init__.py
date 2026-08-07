@@ -10,6 +10,8 @@ are exported here; Maybe operations live in ``returnz.maybe`` (their names would
 otherwise collide with the Result ones).
 """
 
+from importlib.metadata import version
+
 from returnz.batch import BatchResult, collect, gather_results, map_batch, partition
 from returnz.do import do, do_async, require
 from returnz.maybe import Maybe, Nothing, Some, ok_or
@@ -50,4 +52,4 @@ __all__ = [
     "unwrap",
     "unwrap_or",
 ]
-__version__ = "0.0.0"
+__version__ = version("returnz")

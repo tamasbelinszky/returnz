@@ -1,17 +1,34 @@
 [project]
 name = "returnz-fastapi"
-version = "0.0.0"
+version = "0.1.0"
 description = "FastAPI + Pydantic integration for returnz — Results on the wire, typed error boundaries."
 readme = "README.md"
 requires-python = ">=3.14"
 license = "MIT"
-authors = [{ name = "Tamás Belinszky", email = "tamasbelinszky@gmail.com" }]
+license-files = ["LICENSE"]
+authors = [{ name = "Tamás Belinszky" }]
+keywords = ["returnz", "fastapi", "result", "http", "error-handling"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: FastAPI",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.14",
+    "Typing :: Typed",
+]
 dependencies = [
-    "returnz",
-    "returnz-pydantic",
+    "returnz>=0.1.0",
+    "returnz-pydantic>=0.1.0",
     "fastapi>=0.115",
     "pydantic>=2.9",
 ]
+
+[project.urls]
+Homepage = "https://github.com/tamasbelinszky/returnz"
+Repository = "https://github.com/tamasbelinszky/returnz"
+Issues = "https://github.com/tamasbelinszky/returnz/issues"
 
 [build-system]
 requires = ["hatchling"]
