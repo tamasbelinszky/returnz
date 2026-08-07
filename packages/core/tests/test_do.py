@@ -1,8 +1,11 @@
-"""Tests for @do notation — q-based short-circuit over Result and Maybe."""
+"""Tests for @do / @do_async notation — require-based short-circuit."""
+
+import asyncio
 
 import pytest
 
-from returnz import Err, Maybe, Nothing, Ok, Result, Some, do, ok_or, q
+from returnz import Err, Maybe, Nothing, Ok, Result, Some, do, do_async, ok_or, require
+from returnz.do import ShortCircuit
 
 
 def parse_int(s: str) -> Result[int, str]:
@@ -17,31 +20,51 @@ def lookup(table: dict[str, int], key: str) -> Maybe[int]:
     return Some(table[key]) if key in table else Nothing()
 
 
+async def async_parse_int(s: str) -> Result[int, str]:
+    return parse_int(s)
+
+
 @do
 def add_parsed(a: str, b: str) -> Result[int, str]:
-    x = q(parse_int(a))
-    y = q(parse_int(b))
+    x = require(parse_int(a))
+    y = require(parse_int(b))
     return Ok(x + y)
 
 
 @do
 def first_two_chars(s: str) -> Maybe[str]:
-    a = q(char_at(s, 0))
-    b = q(char_at(s, 1))
+    a = require(char_at(s, 0))
+    b = require(char_at(s, 1))
     return Some(a + b)
 
 
 @do
 def lookup_and_double(table: dict[str, int], key: str) -> Result[int, str]:
-    value = q(ok_or(lookup(table, key), f"missing: {key}"))
+    value = require(ok_or(lookup(table, key), f"missing: {key}"))
     return Ok(value * 2)
 
 
 @do
 def sum_of_two_sums(a: str, b: str, c: str, d: str) -> Result[int, str]:
-    left = q(add_parsed(a, b))
-    right = q(add_parsed(c, d))
+    left = require(add_parsed(a, b))
+    right = require(add_parsed(c, d))
     return Ok(left + right)
+
+
+@do
+def swallow_attempt(a: str) -> Result[int, str]:
+    try:
+        x = require(parse_int(a))
+    except Exception:  # must NOT catch the short-circuit
+        x = -1
+    return Ok(x)
+
+
+@do_async
+async def async_add(a: str, b: str) -> Result[int, str]:
+    x = require(await async_parse_int(a))
+    y = require(await async_parse_int(b))
+    return Ok(x + y)
 
 
 class TestAddParsed:
@@ -103,3 +126,31 @@ class TestSumOfTwoSums:
         actual = sum_of_two_sums(*values)
 
         assert actual == expected
+
+
+class TestDoAsync:
+    @pytest.mark.parametrize(
+        ("a", "b", "expected"),
+        [
+            pytest.param("2", "3", Ok(5), id="both-ok"),
+            pytest.param("2", "x", Err("not an int: x"), id="short-circuits"),
+        ],
+    )
+    def test_async_add(self, a: str, b: str, expected: Result[int, str]) -> None:
+        actual = asyncio.run(async_add(a, b))
+
+        assert actual == expected
+
+
+class TestShortCircuitIsUnswallowable:
+    def test_except_exception_does_not_catch_short_circuit(self) -> None:
+        assert swallow_attempt("x") == Err("not an int: x")
+
+    def test_ok_path_is_unaffected(self) -> None:
+        assert swallow_attempt("7") == Ok(7)
+
+
+class TestStrayRequire:
+    def test_require_outside_do_raises_with_guidance(self) -> None:
+        with pytest.raises(ShortCircuit, match=r"outside a @do/@do_async function"):
+            require(Err("boom"))
