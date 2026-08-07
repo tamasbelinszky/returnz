@@ -10,6 +10,7 @@ resolution-markers = [
 members = [
     "returnz",
     "returnz-fastapi",
+    "returnz-pydantic",
 ]
 
 [manifest.dependency-groups]
@@ -416,6 +417,21 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.115" },
+    { name = "pydantic", specifier = ">=2.9" },
+    { name = "returnz", editable = "packages/core" },
+]
+
+[[package]]
+name = "returnz-pydantic"
+version = "0.0.0"
+source = { editable = "packages/pydantic" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "returnz" },
+]
+
+[package.metadata]
+requires-dist = [
     { name = "pydantic", specifier = ">=2.9" },
     { name = "returnz", editable = "packages/core" },
 ]

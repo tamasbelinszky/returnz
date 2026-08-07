@@ -32,7 +32,7 @@ jobs:
         run: uv run pyright
 
       - name: mypy (plugin-free conformance gate)
-        run: uv run mypy packages/core/src packages/fastapi/src
+        run: uv run mypy packages/core/src packages/pydantic/src packages/fastapi/src
 
       - name: pytest
         run: uv run pytest

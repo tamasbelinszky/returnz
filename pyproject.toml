@@ -13,7 +13,7 @@ dev = [
 [tool.ruff]
 line-length = 100
 target-version = "py314"
-src = ["packages/core/src", "packages/fastapi/src"]
+src = ["packages/core/src", "packages/pydantic/src", "packages/fastapi/src"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
@@ -21,7 +21,14 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 [tool.pyright]
 pythonVersion = "3.14"
 typeCheckingMode = "strict"
-include = ["packages/core/src", "packages/fastapi/src", "packages/core/tests", "packages/fastapi/tests"]
+include = [
+    "packages/core/src",
+    "packages/pydantic/src",
+    "packages/fastapi/src",
+    "packages/core/tests",
+    "packages/pydantic/tests",
+    "packages/fastapi/tests",
+]
 
 [tool.mypy]
 python_version = "3.14"
@@ -29,6 +36,6 @@ strict = true
 # Deliberately NO plugins — returnz types are plain PEP 695 generics.
 
 [tool.pytest.ini_options]
-testpaths = ["packages/core/tests", "packages/fastapi/tests"]
+testpaths = ["packages/core/tests", "packages/pydantic/tests", "packages/fastapi/tests"]
 addopts = "--import-mode=importlib"
 consider_namespace_packages = true
