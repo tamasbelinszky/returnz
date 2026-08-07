@@ -23,11 +23,11 @@ def add(a: str, b: str) -> Result[int, str]:
     return Ok(x + y)
 
 
-match add("2", "3"):
+match add("2", "3"):        # exhaustive — checkers flag a missing case, no plugin
     case Ok(total):
-        ...  # exhaustive; verified by pyright/mypy with no plugin
+        print(total)        # 5
     case Err(msg):
-        ...
+        print(msg)
 ```
 
 ## Three ways to compose
@@ -49,24 +49,48 @@ match add("2", "3"):
 ## Return a `Result`, get a documented endpoint
 
 ```python
+from typing import Literal
+
+from pydantic import BaseModel
+from returnz import Ok, Err, Result
 from returnz_fastapi import ResultRouter, HttpError
 
+
+class User(BaseModel):
+    id: str
+    name: str
+
+
+class BadId(HttpError):        # an HttpError carries its HTTP status + tag
+    status_code = 400
+    tag: Literal["bad_id"] = "bad_id"
+    id: str
+
+
+class NotFound(HttpError):
+    status_code = 404
+    tag: Literal["not_found"] = "not_found"
+    id: str
+
+
+_USERS = {"42": User(id="42", name="Ann")}
 router = ResultRouter()
 
 
 @router.get("/users/{id}")
-async def get_user(
-    id: str,
-) -> Result[
-    User, NotFound | RateLimited
-]: ...  # Ok → 200 User;  Err → its HTTP status;  errors documented in /docs
+async def get_user(id: str) -> Result[User, BadId | NotFound]:
+    if not id.isdigit():
+        return Err(BadId(id=id))
+    user = _USERS.get(id)
+    return Ok(user) if user is not None else Err(NotFound(id=id))
 ```
 
-`ResultRouter` unwraps `Ok` to `T`, maps `Err` to the right HTTP status, **and
-auto-documents each typed error in OpenAPI** — schemas derived from the return
-type. `BatchRouter` turns a `BatchResult` into HTTP **207 Multi-Status** (the web
-analog of AWS `batchItemFailures`): successes and typed per-item failures in one
-response, never a whole-batch 500.
+`ResultRouter` unwraps `Ok` to the value (a `200` with `User` here), maps each
+`Err` to its own HTTP status (`400` / `404`), **and auto-documents every error in
+the return-type union in OpenAPI** — the `BadId` and `NotFound` schemas show up
+in `/docs` with no extra code. `BatchRouter` turns a `BatchResult` into HTTP
+**207 Multi-Status** (the web analog of AWS `batchItemFailures`): successes and
+typed per-item failures in one response, never a whole-batch 500.
 
 ## Claude Code skill
 

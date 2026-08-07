@@ -103,18 +103,27 @@ correlation id) into each concurrent op. `partition(results)` splits a list of
 
 ```python
 from typing import Literal
+from pydantic import BaseModel
+from returnz import Ok, Err, Result
 from returnz_fastapi import ResultRouter, HttpError
 
-class NotFound(HttpError):
+class User(BaseModel):
+    id: str
+    name: str
+
+class NotFound(HttpError):          # an HttpError carries its status + tag
     status_code = 404
     tag: Literal["not_found"] = "not_found"
     id: str
 
 router = ResultRouter()
+_users = {"42": User(id="42", name="Ann")}
 
 @router.get("/users/{id}")
-async def get_user(id: str) -> Result[User, NotFound | RateLimited]:
-    ...   # Ok → 200 User; Err → its status; errors auto-documented in /docs
+async def get_user(id: str) -> Result[User, NotFound]:
+    user = _users.get(id)
+    return Ok(user) if user is not None else Err(NotFound(id=id))
+    # Ok → 200 User; Err → 404; NotFound schema auto-documented in /docs
 ```
 
 - **`ResultRouter`** — from `-> Result[T, E]`: unwraps `Ok→T`, maps `Err` to its
