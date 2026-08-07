@@ -23,12 +23,25 @@ def add(a: str, b: str) -> Result[int, str]:
     return Ok(x + y)
 
 
-match add("2", "3"):        # exhaustive — checkers flag a missing case, no plugin
+match add("2", "3"):  # exhaustive — checkers flag a missing case, no plugin
     case Ok(total):
-        print(total)        # 5
+        print(total)  # 5
     case Err(msg):
         print(msg)
 ```
+
+## Install
+
+Requires Python **3.14+**.
+
+```sh
+uv add returnz              # core — Result / Maybe / @do / batch (zero deps)
+uv add returnz-pydantic     # + serialization, parse, TaggedError
+uv add returnz-fastapi      # + FastAPI routers (pulls in the two above)
+```
+
+Add only the layer you need — `returnz-fastapi` depends on `returnz-pydantic`,
+which depends on `returnz`. (`pip install returnz` works too.)
 
 ## Three ways to compose
 
@@ -61,7 +74,7 @@ class User(BaseModel):
     name: str
 
 
-class BadId(HttpError):        # an HttpError carries its HTTP status + tag
+class BadId(HttpError):  # an HttpError carries its HTTP status + tag
     status_code = 400
     tag: Literal["bad_id"] = "bad_id"
     id: str
@@ -109,5 +122,17 @@ uv run ty check       # fast smoke-check + editor LSP
 uv run ruff check . && uv run ruff format --check .
 uv run pytest
 ```
+
+## Releasing
+
+Publishing is automated by [`.github/workflows/publish.yml`](.github/workflows/publish.yml)
+via PyPI Trusted Publishing (OIDC — no tokens stored). To cut a release:
+
+1. Create a trusted publisher for each of `returnz` / `returnz-pydantic` /
+   `returnz-fastapi` at <https://pypi.org/manage/account/publishing/> — repo
+   `tamasbelinszky/returnz`, workflow `publish.yml`, environment `pypi`.
+2. Bump the version in each `packages/*/pyproject.toml`; commit.
+3. Publish a GitHub release (tag `v0.1.0`) — the workflow builds and uploads all
+   three packages.
 
 See `NOTICE` for lineage. MIT licensed.
