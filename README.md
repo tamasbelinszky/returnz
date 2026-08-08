@@ -51,6 +51,47 @@ which depends on `returnz`. (`pip install returnz` works too.)
 | **Validate** | `parse` (Pydantic) | accumulate *all* field errors at once |
 | **Partition** | `map_batch` | run all independently, keep every outcome — partial success |
 
+## When to use `Maybe` (and when not to)
+
+**Default to `T | None`.** Python's `Optional` is already a checked sum type —
+`if x is not None` narrows exhaustively in `pyright`, `ty`, and plugin-free
+`mypy`. `Maybe` adds no type safety over it. The whole ecosystem speaks `None`,
+so every `Maybe` at a boundary is a conversion you have to write.
+
+Reach for `Maybe` only when absence must **survive nesting**. `Optional[Optional[T]]`
+collapses to `Optional[T]`; `Maybe[T | None]` does not — `Some(None)` and
+`Nothing()` stay distinct. Three cases where that distinction is load-bearing:
+
+| Case | Why `None` fails |
+| --- | --- |
+| **Cache miss vs. cached null** | `cache.get(key)` cannot tell "not cached" from "cached, value is null" — so you re-fetch every hit for legitimately-null values |
+| **PATCH / partial update** | "field omitted" vs. "field explicitly `null`" — otherwise a sentinel default or `model_fields_set` introspection |
+| **Generic code where `T` may be `None`** | `def first(xs: list[T]) -> T \| None` is wrong for `list[None]`: empty list and `[None]` are indistinguishable. This is the hole `dict.get` has |
+
+```python
+from returnz import Maybe, Nothing, Some
+
+
+def cached(cache: dict[str, int | None], key: str) -> Maybe[int | None]:
+    return Some(cache[key]) if key in cache else Nothing()
+
+
+cached({"a": None}, "a")  # Some(value=None) — cached, and the value is null
+cached({}, "a")           # Nothing()        — not cached
+```
+
+Everything else `Maybe` offers is ergonomics: `map_some` / `and_then` chaining
+because Python has no `?.`, and `ok_or` to bridge into `Result` instead of
+writing `if x is None: return Err(...)` at each step. Good ergonomics — but not
+a reason to convert a codebase that is happily using `None`.
+
+`Maybe` combinators live in `returnz.maybe`, not at the top level; their names
+would collide with the `Result` ones.
+
+```python
+from returnz.maybe import ok_or, unwrap_or
+```
+
 ## Packages
 
 | Package | Import | What |
