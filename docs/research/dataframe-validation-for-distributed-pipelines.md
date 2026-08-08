@@ -519,12 +519,12 @@ shape is the one to target.
 ([asset_check_result.py](https://raw.githubusercontent.com/dagster-io/dagster/master/python_modules/dagster/dagster/_core/definitions/asset_checks/asset_check_result.py)):
 
 ```python
-("passed",      PublicAttr[bool]),
-("asset_key",   PublicAttr[AssetKey | None]),
-("check_name",  PublicAttr[str | None]),
-("metadata",    PublicAttr[Mapping[str, MetadataValue]]),
-("severity",    PublicAttr[AssetCheckSeverity]),
-("description", PublicAttr[str | None]),
+(("passed", PublicAttr[bool]),)
+(("asset_key", PublicAttr[AssetKey | None]),)
+(("check_name", PublicAttr[str | None]),)
+(("metadata", PublicAttr[Mapping[str, MetadataValue]]),)
+(("severity", PublicAttr[AssetCheckSeverity]),)
+(("description", PublicAttr[str | None]),)
 ```
 
 Constructor is keyword-only, `severity` defaults to `AssetCheckSeverity.ERROR`.

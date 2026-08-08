@@ -77,7 +77,7 @@ def cached(cache: dict[str, int | None], key: str) -> Maybe[int | None]:
 
 
 cached({"a": None}, "a")  # Some(value=None) — cached, and the value is null
-cached({}, "a")           # Nothing()        — not cached
+cached({}, "a")  # Nothing()        — not cached
 ```
 
 Everything else `Maybe` offers is ergonomics: `map_some` / `and_then` chaining
