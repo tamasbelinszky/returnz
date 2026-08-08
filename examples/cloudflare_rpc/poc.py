@@ -25,7 +25,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, TypeAdapter
 
-from returnz import BatchResult, Err, Nothing, Ok, Result, Some
+from returnz import BatchResult, Err, Nothing, Ok, Some
 from returnz_pydantic import RzBatchResult, RzMaybe, RzResult, TaggedError
 
 
