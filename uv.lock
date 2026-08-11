@@ -439,12 +439,12 @@ wheels = [
 
 [[package]]
 name = "returnz"
-version = "0.1.0"
+version = "0.1.2"
 source = { editable = "packages/core" }
 
 [[package]]
 name = "returnz-fastapi"
-version = "0.1.0"
+version = "0.1.2"
 source = { editable = "packages/fastapi" }
 dependencies = [
     { name = "fastapi" },
@@ -463,7 +463,7 @@ requires-dist = [
 
 [[package]]
 name = "returnz-pydantic"
-version = "0.1.0"
+version = "0.1.2"
 source = { editable = "packages/pydantic" }
 dependencies = [
     { name = "pydantic" },

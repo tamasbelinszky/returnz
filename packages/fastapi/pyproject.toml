@@ -1,6 +1,6 @@
 [project]
 name = "returnz-fastapi"
-version = "0.1.0"
+version = "0.1.2"
 description = "FastAPI + Pydantic integration for returnz — Results on the wire, typed error boundaries."
 readme = "README.md"
 requires-python = ">=3.14"
@@ -20,7 +20,7 @@ classifiers = [
 ]
 dependencies = [
     "returnz>=0.1.0",
-    "returnz-pydantic>=0.1.0",
+    "returnz-pydantic>=0.1.2",
     "fastapi>=0.115",
     "pydantic>=2.9",
 ]

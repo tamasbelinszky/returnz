@@ -30,6 +30,27 @@ jobs:
         with:
           python-version: "3.14"
 
+      - name: Verify package versions match tag
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python - <<'PY'
+          import os
+          import tomllib
+
+          expected = os.environ["RELEASE_TAG"].removeprefix("v")
+          paths = (
+              "packages/core/pyproject.toml",
+              "packages/pydantic/pyproject.toml",
+              "packages/fastapi/pyproject.toml",
+          )
+          versions = {
+              path: tomllib.load(open(path, "rb"))["project"]["version"] for path in paths
+          }
+          if set(versions.values()) != {expected}:
+              raise SystemExit(f"tag {expected}; package versions {versions}")
+          PY
+
       - name: Build ${{ matrix.package }}
         run: uv build --package ${{ matrix.package }}
 

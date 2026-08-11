@@ -1,6 +1,6 @@
 [project]
 name = "returnz"
-version = "0.1.0"
+version = "0.1.2"
 description = "Result / Maybe / Reader for modern Python — concrete generics, no HKT, no type-checker plugin."
 readme = "README.md"
 requires-python = ">=3.14"
