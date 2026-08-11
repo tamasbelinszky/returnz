@@ -9,9 +9,10 @@ from importlib.metadata import version
 
 from returnz_pydantic.errors import TaggedError
 from returnz_pydantic.parsing import parse, parse_json
-from returnz_pydantic.serialization import RzBatchResult, RzMaybe, RzResult
+from returnz_pydantic.serialization import BatchResultSchema, RzBatchResult, RzMaybe, RzResult
 
 __all__ = [
+    "BatchResultSchema",
     "RzBatchResult",
     "RzMaybe",
     "RzResult",

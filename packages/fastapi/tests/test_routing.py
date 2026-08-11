@@ -70,6 +70,30 @@ class TestResultRouterBehaviour:
         assert response.json() == {"detail": {"tag": "rate_limited", "retry_after": 5}}
 
 
+class TestRegistrationValidation:
+    def test_non_http_error_type_rejected_at_registration(self) -> None:
+        bad_router = ResultRouter()
+
+        with pytest.raises(
+            TypeError,
+            match=r"lookup: every error type in Result\[T, E\] must be an "
+            r"HttpError subclass; got <class 'str'>",
+        ):
+
+            @bad_router.get("/lookup")
+            async def lookup() -> Result[str, str]:
+                return Ok("x")
+
+    def test_non_http_error_union_member_rejected_at_registration(self) -> None:
+        bad_router = ResultRouter()
+
+        with pytest.raises(TypeError, match=r"got <class 'ValueError'>"):
+
+            @bad_router.get("/lookup")
+            async def lookup() -> Result[str, NotFound | ValueError]:
+                return Ok("x")
+
+
 class TestOpenApiErrorDocs:
     def test_typed_errors_documented_out_of_the_box(self) -> None:
         responses = app.openapi()["paths"]["/zip/{uid}"]["get"]["responses"]
