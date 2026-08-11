@@ -7,6 +7,7 @@ from pydantic import BaseModel, TypeAdapter
 
 from returnz import BatchResult, Err, Maybe, Nothing, Ok, Result, Some
 from returnz_pydantic import RzBatchResult, RzMaybe, RzResult, TaggedError
+from returnz_pydantic.serialization import _batch_result_ref  # pyright: ignore[reportPrivateUsage]
 
 
 class User(BaseModel):
@@ -88,3 +89,39 @@ class TestBatchResultEnvelope:
         outcome = BatchResult(succeeded={"a": "a"}, failed={"b": Boom(detail="x")})
 
         assert _batch.validate_python(_batch.dump_python(outcome)) == outcome
+
+
+class TestBatchResultRef:
+    @pytest.mark.parametrize(
+        ("key_type", "value_type", "error_type", "ref"),
+        [
+            pytest.param(
+                str,
+                str,
+                ValueError,
+                "returnz.BatchResult_str_str_ValueError:"
+                "builtins.str+builtins.str+builtins.ValueError",
+                id="simple",
+            ),
+            pytest.param(
+                str,
+                str,
+                int | str,
+                "returnz.BatchResult_str_str_int_or_str:"
+                "builtins.str+builtins.str+typing.Union(builtins.int+builtins.str)",
+                id="union-error",
+            ),
+            pytest.param(
+                str,
+                dict[str, int],
+                ValueError,
+                "returnz.BatchResult_str_dict_str_int_ValueError:"
+                "builtins.str+builtins.dict(builtins.str+builtins.int)+builtins.ValueError",
+                id="nested-generic",
+            ),
+        ],
+    )
+    def test_clean_label_with_qualified_identity(
+        self, key_type: object, value_type: object, error_type: object, ref: str
+    ) -> None:
+        assert _batch_result_ref(key_type, value_type, error_type) == ref

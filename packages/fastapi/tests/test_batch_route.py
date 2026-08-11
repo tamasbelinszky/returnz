@@ -56,7 +56,11 @@ class TestBatchRoute:
 
 
 class TestBatchRouteDocs:
-    def test_207_is_documented(self) -> None:
-        responses = app.openapi()["paths"]["/orders/delete"]["post"]["responses"]
+    def test_207_documents_cleanly_named_envelope(self) -> None:
+        spec = app.openapi()
+        responses = spec["paths"]["/orders/delete"]["post"]["responses"]
 
-        assert "207" in responses
+        assert responses["207"]["content"]["application/json"]["schema"] == {
+            "$ref": "#/components/schemas/BatchResult_str_str_DeleteError"
+        }
+        assert "BatchResult_str_str_DeleteError" in spec["components"]["schemas"]

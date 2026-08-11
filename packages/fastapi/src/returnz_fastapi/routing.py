@@ -11,7 +11,8 @@ response schema, and transform the return value — differing only in the transf
 3. **auto-derives the OpenAPI error responses** from ``E`` — each ``HttpError`` in
    the (possibly union) error type becomes a documented ``responses`` entry.
    Plain FastAPI documents only ``200`` + ``422``; here your typed errors show up
-   in ``/docs`` out of the box.
+   in ``/docs`` out of the box. A non-``HttpError`` member in ``E`` fails at
+   registration — not with a 500 at request time.
 
 ``BatchRouter`` — from ``-> BatchResult[K, T, E]``: responds **HTTP 207
 Multi-Status** with the ``{succeeded, failed}`` envelope (via ``RzBatchResult``),
@@ -32,7 +33,7 @@ import inspect
 import types
 from collections.abc import Callable
 from http import HTTPStatus
-from typing import Any, Union, get_args, get_origin, get_type_hints
+from typing import Annotated, Any, Union, get_args, get_origin, get_type_hints
 
 from fastapi import APIRouter
 from fastapi.datastructures import DefaultPlaceholder
@@ -41,7 +42,10 @@ from fastapi.routing import APIRoute
 from returnz import BatchResult, Result
 from returnz.result import Err, Ok
 from returnz_fastapi.errors import HttpError
-from returnz_pydantic import RzBatchResult
+
+# Not the RzBatchResult alias: pydantic replaces a type alias's core-schema ref
+# with an alias-derived one, mangling the component name (RzBatchResult_str_str_E_).
+from returnz_pydantic import BatchResultSchema
 
 
 def _is_result(annotation: object) -> bool:
@@ -52,14 +56,28 @@ def _is_batch_result(annotation: object) -> bool:
     return get_origin(annotation) is BatchResult
 
 
-def _error_types(annotation: object) -> list[type[HttpError]]:
-    """Flatten a (possibly union) error annotation to its HttpError members."""
+def _error_types(annotation: object, endpoint_name: str) -> list[type[HttpError]]:
+    """Flatten a (possibly union) error annotation to its HttpError members.
+
+    Non-``HttpError`` members are rejected at registration — otherwise they'd
+    be undocumented in OpenAPI and 500 at request time.
+    """
     members = (
         get_args(annotation)
         if get_origin(annotation) in (Union, types.UnionType)
         else (annotation,)
     )
-    return [m for m in members if isinstance(m, type) and issubclass(m, HttpError)]
+    error_types: list[type[HttpError]] = []
+    for member in members:
+        if not (isinstance(member, type) and issubclass(member, HttpError)):
+            raise TypeError(
+                f"{endpoint_name}: every error type in Result[T, E] must be an "
+                f"HttpError subclass; got {member!r}. Subclass "
+                f"returnz_fastapi.HttpError (it carries the HTTP status), or "
+                f"handle the Result in a plain route."
+            )
+        error_types.append(member)
+    return error_types
 
 
 def _responses_for(errors: list[type[HttpError]]) -> dict[int | str, dict[str, Any]]:
@@ -100,7 +118,8 @@ class ResultRoute(APIRoute):
                 kwargs["response_model"] = success_type
 
             responses: dict[Any, Any] = dict(kwargs.get("responses") or {})
-            for status, spec in _responses_for(_error_types(error_type)).items():
+            errors = _error_types(error_type, getattr(endpoint, "__name__", repr(endpoint)))
+            for status, spec in _responses_for(errors).items():
                 responses.setdefault(status, spec)
             kwargs["responses"] = responses
 
@@ -136,7 +155,10 @@ class BatchRoute(APIRoute):
             response_model = kwargs.get("response_model")
             if response_model is None or isinstance(response_model, DefaultPlaceholder):
                 # types from get_args, built at runtime — mypy can't verify vars-as-types.
-                kwargs["response_model"] = RzBatchResult[key_type, value_type, error_type]  # type: ignore[valid-type]
+                kwargs["response_model"] = Annotated[
+                    BatchResult[key_type, value_type, error_type],  # type: ignore[valid-type]
+                    BatchResultSchema(),
+                ]
         super().__init__(path, endpoint, **kwargs)
 
 
