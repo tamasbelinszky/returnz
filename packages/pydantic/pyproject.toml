@@ -1,6 +1,6 @@
 [project]
 name = "returnz-pydantic"
-version = "0.1.2"
+version = "0.1.4"
 description = "Pydantic v2 integration for returnz — tagged-envelope serialization, parse() boundary, tagged errors."
 readme = "README.md"
 requires-python = ">=3.14"
