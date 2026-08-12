@@ -8,27 +8,53 @@ type checkers (`pyright`, plugin-free `mypy`, `ty`) + Pydantic at the boundary +
 FastAPI for the web. **No higher-kinded-type emulation. No type-checker plugin.**
 Python **3.14+**.
 
+One domain runs through this whole README — orders that can be found, cancelled,
+shipped, and deleted — from zero-dep core to Pydantic boundary to HTTP.
+
 ```python
-from returnz import Ok, Err, Result, do, require
+from dataclasses import dataclass
+
+from returnz import Err, Ok, Result, do, require
 
 
-def parse_int(s: str) -> Result[int, str]:
-    return Ok(int(s)) if s.lstrip("-").isdigit() else Err(f"not an int: {s}")
+@dataclass(frozen=True)
+class NotFound:
+    order_id: str
+
+
+@dataclass(frozen=True)
+class AlreadyShipped:
+    order_id: str
+
+
+_STATUS = {"o1": "pending", "o2": "shipped"}
+
+
+def find_status(order_id: str) -> Result[str, NotFound]:
+    status = _STATUS.get(order_id)
+    return Ok(status) if status is not None else Err(NotFound(order_id))
 
 
 @do
-def add(a: str, b: str) -> Result[int, str]:
-    x = require(parse_int(a))  # the `?` of returnz — unwrap or short-circuit
-    y = require(parse_int(b))
-    return Ok(x + y)
+def cancel_order(order_id: str) -> Result[str, NotFound | AlreadyShipped]:
+    status = require(find_status(order_id))  # the `?` of returnz — unwrap or short-circuit
+    if status == "shipped":
+        return Err(AlreadyShipped(order_id))
+    return Ok(f"order {order_id} cancelled")
 
 
-match add("2", "3"):  # exhaustive — checkers flag a missing case, no plugin
-    case Ok(total):
-        print(total)  # 5
-    case Err(msg):
-        print(msg)
+match cancel_order("o2"):
+    case Ok(message):
+        print(message)
+    case Err(NotFound(order_id)):
+        print(f"no such order: {order_id}")
+    case Err(AlreadyShipped(order_id)):
+        print(f"order {order_id} already shipped")  # ← this branch
 ```
+
+Errors are plain values with types — so the `match` is **exhaustive**: delete the
+`AlreadyShipped` arm and `pyright`/`mypy`/`ty` flag the fall-through, no plugin
+needed.
 
 ## Install
 
@@ -51,6 +77,46 @@ which depends on `returnz`. (`pip install returnz` works too.)
 | **Validate** | `parse` (Pydantic) | accumulate *all* field errors at once |
 | **Partition** | `map_batch` | run all independently, keep every outcome — partial success |
 
+**Short-circuit** is the hero example above: `cancel_order` bails on the first
+`Err` and the checker knows the full error union.
+
+**Validate** at the boundary — `parse` returns a `Result` instead of raising,
+and collects every field error, not just the first:
+
+```python
+from pydantic import BaseModel
+from returnz import Err, Ok
+from returnz_pydantic import parse
+
+
+class PlaceOrder(BaseModel):
+    item: str
+    quantity: int
+
+
+match parse(PlaceOrder, {"item": None, "quantity": "many"}):
+    case Ok(command):
+        ...
+    case Err(error):
+        print(error.error_count())  # 2 — both fields, not just the first
+```
+
+**Partition** when operations are independent — cancel every order you can,
+report the rest, never a whole-batch failure:
+
+```python
+from returnz import map_batch
+
+
+async def cancel(order_id: str) -> Result[str, AlreadyShipped]: ...  # as above, but async
+
+
+outcome = await map_batch(["o1", "o2", "o3"], cancel, concurrency=8)
+outcome.succeeded  # {"o1": "order o1 cancelled", "o3": "order o3 cancelled"}
+outcome.failed  # {"o2": AlreadyShipped(order_id="o2")}
+outcome.failed_keys  # ["o2"] — the retry set
+```
+
 ## When to use `Maybe` (and when not to)
 
 **Default to `T | None`.** Python's `Optional` is already a checked sum type —
@@ -72,12 +138,12 @@ collapses to `Optional[T]`; `Maybe[T | None]` does not — `Some(None)` and
 from returnz import Maybe, Nothing, Some
 
 
-def cached(cache: dict[str, int | None], key: str) -> Maybe[int | None]:
-    return Some(cache[key]) if key in cache else Nothing()
+def checked_discount(cache: dict[str, int | None], order_id: str) -> Maybe[int | None]:
+    return Some(cache[order_id]) if order_id in cache else Nothing()
 
 
-cached({"a": None}, "a")  # Some(value=None) — cached, and the value is null
-cached({}, "a")  # Nothing()        — not cached
+checked_discount({"o1": None}, "o1")  # Some(value=None) — checked; no discount applies
+checked_discount({}, "o1")  # Nothing()        — not checked yet
 ```
 
 Everything else `Maybe` offers is ergonomics: `map_some` / `and_then` chaining
@@ -102,52 +168,97 @@ from returnz.maybe import ok_or, unwrap_or
 
 ## Return a `Result`, get a documented endpoint
 
+The same orders domain over HTTP — the errors become `HttpError`s (a Pydantic
+`TaggedError` that knows its status), and the return type drives everything:
+
 ```python
 from typing import Literal
 
 from pydantic import BaseModel
-from returnz import Ok, Err, Result
-from returnz_fastapi import ResultRouter, HttpError
+from returnz import Err, Ok, Result
+from returnz_fastapi import HttpError, ResultRouter
 
 
-class User(BaseModel):
+class Order(BaseModel):
     id: str
-    name: str
+    item: str
+    shipped: bool = False
 
 
-class BadId(HttpError):  # an HttpError carries its HTTP status + tag
-    status_code = 400
-    tag: Literal["bad_id"] = "bad_id"
-    id: str
-
-
-class NotFound(HttpError):
+class NotFound(HttpError):  # an HttpError carries its HTTP status + tag
     status_code = 404
     tag: Literal["not_found"] = "not_found"
-    id: str
+    order_id: str
 
 
-_USERS = {"42": User(id="42", name="Ann")}
+class AlreadyShipped(HttpError):
+    status_code = 409
+    tag: Literal["already_shipped"] = "already_shipped"
+    order_id: str
+
+
+_ORDERS = {"1": Order(id="1", item="Widget"), "2": Order(id="2", item="Gadget", shipped=True)}
 router = ResultRouter()
 
 
-@router.get("/users/{id}")
-async def get_user(id: str) -> Result[User, BadId | NotFound]:
-    if not id.isdigit():
-        return Err(BadId(id=id))
-    user = _USERS.get(id)
-    return Ok(user) if user is not None else Err(NotFound(id=id))
+@router.post("/orders/{order_id}/ship")
+async def ship_order(order_id: str) -> Result[Order, NotFound | AlreadyShipped]:
+    order = _ORDERS.get(order_id)
+    if order is None:
+        return Err(NotFound(order_id=order_id))
+    if order.shipped:
+        return Err(AlreadyShipped(order_id=order_id))
+    shipped = order.model_copy(update={"shipped": True})
+    _ORDERS[order_id] = shipped
+    return Ok(shipped)
 ```
 
-`ResultRouter` unwraps `Ok` to the value (a `200` with `User` here), maps each
-`Err` to its own HTTP status (`400` / `404`), **and auto-documents every error in
-the return-type union in OpenAPI** — the `BadId` and `NotFound` schemas show up
-in `/docs` with no extra code. `BatchRouter` turns a `BatchResult` into HTTP
-**207 Multi-Status** (the web analog of AWS `batchItemFailures`): successes and
-typed per-item failures in one response, never a whole-batch 500.
+On the wire:
+
+```
+POST /orders/1/ship → 200 {"id": "1", "item": "Widget", "shipped": true}
+POST /orders/2/ship → 409 {"tag": "already_shipped", "order_id": "2"}
+```
+
+`ResultRouter` unwraps `Ok` to the value, maps each `Err` to its own status, and
+**auto-documents every error in the return-type union in OpenAPI** — `/docs`
+shows `200` / `404` / `409` with the `NotFound` and `AlreadyShipped` schemas, no
+extra code. A non-`HttpError` in the union fails at registration, not with a 500
+at request time.
+
+Batch endpoints keep every outcome — `map_batch` + `BatchRouter` respond HTTP
+**207 Multi-Status** (the web analog of AWS `batchItemFailures`), never a
+whole-batch 500:
+
+```python
+from returnz import BatchResult, map_batch
+from returnz_fastapi import BatchRouter
+
+
+async def delete_order(order_id: str) -> Result[str, NotFound]:
+    popped = _ORDERS.pop(order_id, None)
+    return Ok(order_id) if popped is not None else Err(NotFound(order_id=order_id))
+
+
+batch = BatchRouter()
+
+
+@batch.post("/orders/delete")
+async def delete_orders(ids: list[str]) -> BatchResult[str, str, NotFound]:
+    return await map_batch(ids, delete_order)
+```
+
+```
+POST /orders/delete ["1", "99"] → 207
+{"succeeded": {"1": "1"}, "failed": {"99": {"tag": "not_found", "order_id": "99"}}}
+```
 
 A complete, runnable version is in [`examples/fastapi/`](examples/fastapi/) —
-`uv run examples/fastapi/app.py`, then open `/docs`.
+`uv run examples/fastapi/app.py`, then open `/docs`. For returnz in a full
+application, see
+[`full-stack-fastapi-template-returnz`](https://github.com/tamasbelinszky/full-stack-fastapi-template-returnz)
+— FastAPI's official full-stack template converted to `Result`-based handlers,
+typed errors documented in every endpoint's responses.
 
 ## Claude Code skill
 

@@ -61,13 +61,13 @@ class TestResultRouterBehaviour:
         response = client.get("/zip/99")
 
         assert response.status_code == 404
-        assert response.json() == {"detail": {"tag": "not_found", "id": "99"}}
+        assert response.json() == {"tag": "not_found", "id": "99"}
 
     def test_rate_limited_maps_to_429(self, client: TestClient) -> None:
         response = client.get("/zip/slow")
 
         assert response.status_code == 429
-        assert response.json() == {"detail": {"tag": "rate_limited", "retry_after": 5}}
+        assert response.json() == {"tag": "rate_limited", "retry_after": 5}
 
 
 class TestRegistrationValidation:

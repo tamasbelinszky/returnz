@@ -37,7 +37,13 @@ strict = true
 # Deliberately NO plugins — returnz types are plain PEP 695 generics.
 
 [tool.pytest.ini_options]
-testpaths = ["packages/core/tests", "packages/pydantic/tests", "packages/fastapi/tests"]
+testpaths = [
+    "packages/core/tests",
+    "packages/pydantic/tests",
+    "packages/fastapi/tests",
+    "examples/fastapi",
+]
 addopts = "--import-mode=importlib"
+pythonpath = ["examples/fastapi"]
 consider_namespace_packages = true
 filterwarnings = ["error"]

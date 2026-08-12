@@ -5,8 +5,9 @@ response schema, and transform the return value — differing only in the transf
 
 ``ResultRouter`` — from ``-> Result[T, E]``:
 
-1. **unwraps** ``Ok`` to its value (response body is ``T``) or raises the ``Err``'s
-   ``HTTPException`` (``Err -> HTTPException`` by the error's status);
+1. **unwraps** ``Ok`` to its value (response body is ``T``) or serializes the
+   ``Err`` as its bare tagged body at its own status — the wire shape matches the
+   documented schema exactly (no ``{"detail": ...}`` wrapper);
 2. sets ``response_model = T`` so the ``200`` schema is correct;
 3. **auto-derives the OpenAPI error responses** from ``E`` — each ``HttpError`` in
    the (possibly union) error type becomes a documented ``responses`` entry.
@@ -104,7 +105,9 @@ def _unwrap(result: Result[Any, Any]) -> Any:
                     f"ResultRoute requires the Err type to be an HttpError; "
                     f"got {type(error).__name__}"
                 )
-            raise error.to_http_exception()
+            # A Response return bypasses response_model, so the error ships
+            # as its bare tagged body — the exact shape OpenAPI documents.
+            return error.to_response()
 
 
 class ResultRoute(APIRoute):

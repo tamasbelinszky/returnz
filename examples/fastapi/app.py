@@ -31,19 +31,19 @@ class Order(BaseModel):
 class BadId(HttpError):
     status_code = 400
     tag: Literal["bad_id"] = "bad_id"
-    id: str
+    order_id: str
 
 
 class NotFound(HttpError):
     status_code = 404
     tag: Literal["not_found"] = "not_found"
-    id: str
+    order_id: str
 
 
 class AlreadyShipped(HttpError):
     status_code = 409
     tag: Literal["already_shipped"] = "already_shipped"
-    id: str
+    order_id: str
 
 
 _ORDERS: dict[str, Order] = {
@@ -55,23 +55,24 @@ _ORDERS: dict[str, Order] = {
 # Services return Results — errors are values, never raised.
 async def find_order(order_id: str) -> Result[Order, BadId | NotFound]:
     if not order_id.isdigit():
-        return Err(BadId(id=order_id))
+        return Err(BadId(order_id=order_id))
     order = _ORDERS.get(order_id)
-    return Ok(order) if order is not None else Err(NotFound(id=order_id))
+    return Ok(order) if order is not None else Err(NotFound(order_id=order_id))
 
 
 @do_async
 async def ship_order(order_id: str) -> Result[Order, BadId | NotFound | AlreadyShipped]:
     order = require(await find_order(order_id))  # `?` — bail on BadId / NotFound
     if order.shipped:
-        return Err(AlreadyShipped(id=order_id))
+        return Err(AlreadyShipped(order_id=order_id))
     shipped = order.model_copy(update={"shipped": True})
     _ORDERS[order_id] = shipped
     return Ok(shipped)
 
 
 async def delete_order(order_id: str) -> Result[str, NotFound]:
-    return Ok(order_id) if _ORDERS.pop(order_id, None) is not None else Err(NotFound(id=order_id))
+    popped = _ORDERS.pop(order_id, None)
+    return Ok(order_id) if popped is not None else Err(NotFound(order_id=order_id))
 
 
 # ResultRouter: Ok -> value, Err -> its HTTP status, errors documented in /docs.
